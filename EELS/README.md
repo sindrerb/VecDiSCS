@@ -1,3 +1,3 @@
-README.txt
-
 # EELS package
+
+Description will come
