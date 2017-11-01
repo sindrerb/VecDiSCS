@@ -1,9 +1,6 @@
 #include <Python.h>
 #include "/usr/local/lib/python2.7/dist-packages/numpy/core/include/numpy/arrayobject.h"
 
-double fermiDirac(double energy, double fermiLevel, double temperature){
-    return 1.0/(exp((energy-fermiLevel)/temperature)+1.0);
-}
 
 static PyObject*
 calculate_spectrum (PyObject *dummy, PyObject *args)
@@ -11,9 +8,8 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
     PyObject *arg1 = NULL; // Should be a 3x1 iterable 
     PyObject *arg2 = NULL; // Should be a 3x1 iterable 
     double fermiEnergy; // Shuld be regular float
-    double temperature;
 
-    if (!PyArg_ParseTuple(args, "OOdd", &arg1, &arg2, &fermiEnergy, &temperature))
+    if (!PyArg_ParseTuple(args, "OOd", &arg1, &arg2, &fermiEnergy))
         return NULL;
 
 
@@ -314,7 +310,7 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
     double *v_f;
     double momTrans[3] = {0.0,0.0,0.0};
     double q_squared;
-    double fermiValueI, fermiValue;
+
     double xi,yi,zi;
 
     printf("\n\nEf=%.3f \n\n",fermiEnergy);
@@ -325,19 +321,13 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
             //printf("\nk(%i)=>k(%i):",initial_k, final_k);
             for (int initial_band = 0; initial_band < nBands-1; initial_band++){
                 initial_energy = (double *) PyArray_GETPTR2(energy_bands, initial_k, initial_band);
-
-                fermiValueI = fermiDirac(*initial_energy,fermiEnergy,temperature);
-                if (fermiValueI < 1e-5) continue; //Speeds up calculation
+                if (*initial_energy > fermiEnergy) continue; //Speeds up calculation
  
             
                 for (int final_band = initial_band; final_band < nBands; final_band++){
 
                     final_energy =  (double *) PyArray_GETPTR2(energy_bands, final_k, final_band);
-
-                    fermiValue = fermiValueI * (1.0-fermiDirac(*final_energy, fermiEnergy, temperature));
-                    //if (*final_energy < fermiEnergy) continue; //Speeds up calculation
-                    if (fermiValue < 1e-5) continue; //Speeds up calculation
-
+                    if (*final_energy < fermiEnergy) continue; //Speeds up calculation
 
                     energyTransfer = *final_energy-*initial_energy;
                     energyIndex = (energyTransfer-energy_offset)/dE;
@@ -415,7 +405,7 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
                                         if(qIndex[1] < dims[2] && qIndex[1] >= 0){
                                             if(qIndex[2] < dims[3] && qIndex[2] >= 0){
                                                 //printf("(%i, %i, %i), %.2f \n",qIndex[0],qIndex[1],qIndex[2],sqrt(q_squared));
-                                                EELS[energyIndex][qIndex[0]][qIndex[1]][qIndex[2]] += (probability*fermiValue/(q_squared*q_squared));
+                                                EELS[energyIndex][qIndex[0]][qIndex[1]][qIndex[2]] += (probability/(q_squared*q_squared));
                                             }
                                         }
                                     } else {
@@ -461,7 +451,7 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
 
 
 
-    printf("\n\n Iterations: %i \n\n", iterations);
+    printf("\n\n Iteration: %i \n\n", iterations);
     return Py_BuildValue("O", ArgsArray);
     //return Py_BuildValue("O&", EELS);
 }
