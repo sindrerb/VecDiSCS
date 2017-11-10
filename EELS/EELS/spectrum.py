@@ -121,8 +121,6 @@ def calculate_spectrum(data_structre, energy_binning, fermi_energy, brillouinZon
     :returns: A four dimensional histogram of energy transfer with corresponding moment transfer
     """
 
-    print(brillouinZone)
-
     temperature = temperature*(0.0259/298)
 
     A = _spectrum.calculate_spectrum(data_structre, energy_binning, brillouinZone, fermi_energy, temperature)

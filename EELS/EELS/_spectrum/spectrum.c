@@ -289,13 +289,13 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
 
                     energyTransfer = *final_energy-*initial_energy;
                     energyIndex = (energyTransfer-energy_offset)/dE;
-                    
+                    //printf("%.3f - %.3f = %.3f => [%i]\t", energyTransfer, energy_offset, (energyTransfer-energy_offset), energyIndex );
                     probability = 0;
                     
                     for (int v = 0; v < nWaves; v++){                      
                         v_i = *(double *) PyArray_GETPTR3(wave_vectors, initial_k, initial_band,v);
                         v_f = *(double *) PyArray_GETPTR3(wave_vectors, final_k, final_band,v);
-                        //printf("(%f * %f)\n", v_i, v_f);
+                        //printf("(%f * %f)\n", v_i, v_f);,
                         probability += v_i * v_f;
                     }
                     probability = probability*probability;
@@ -322,37 +322,52 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
                                 //momProj[qAxis] = 0;
                             for(int q = 0; q < 3; q++){
                                 momTrans[q] =  (PyFloat_AsDouble(PyList_GetItem(final_k_vec,q))-PyFloat_AsDouble(PyList_GetItem(initial_k_vec,q)));
-                                if(momTrans[q]>0.5){
-                                    momTrans[q] = momTrans[q]-1.0;
+                                if(momTrans[q]>*(double*)PyArray_GETPTR1(diffractionZone,q)*0.5){
+                                    //printf("%.2f =>", momTrans[q]);
+                                    momTrans[q] = momTrans[q]-*(double*)PyArray_GETPTR1(diffractionZone,q);
+                                    //SKJEKK HER!
+                                    //printf("%.2f\n", momTrans[q]);
                                 } 
-                                if(momTrans[q]<-0.5){
-                                    momTrans[q] = momTrans[q]+1.0;
-
+                                if(momTrans[q]<*(double*)PyArray_GETPTR1(diffractionZone,q)*(-0.5)){
+                                    //printf("(%.2f>%.2f) %.2f",*(double*)PyArray_GETPTR1(diffractionZone,q)*(-0.5), momTrans[q], momTrans[q]);
+                                    momTrans[q] = momTrans[q]+*(double*)PyArray_GETPTR1(diffractionZone,q);
+                                    //printf("+%.2f=%.2f\n",*(double*)PyArray_GETPTR1(diffractionZone,q), momTrans[q]);
                                 }
-                                qIndex[q] = (momTrans[q]+*(double*)PyArray_GETPTR1(diffractionZone,0)*0.5)/dQ[q];
+                                qIndex[q] = (momTrans[q]+*(double*)PyArray_GETPTR1(diffractionZone,q)*0.5)/dQ[q];
     //                                    momProj[qAxis] += momTrans[q]* *(double *)PyArray_GETPTR2(brillouinZone, qAxis,q);
                             }
                                 //qIndex[qAxis] += (momProj[q]+0.5)/dQ[q]; //0.5 +- 1e-5
                             //}
 
                             q_squared = (momTrans[0]*momTrans[0]+momTrans[1]*momTrans[1]+momTrans[2]*momTrans[2]);
-                            //printf("[%.2f,%.2f,%.2f]=%.3f\n",momTrans[0],momTrans[1],momTrans[2],q_squared);
-                            //printf("[%i,%i,%i,%i]=%.3f\n",energyIndex,qIndex[0],qIndex[1],qIndex[2],q_squared);
+                            //printf("[%.2f,%.2f,%.2f]=>",momTrans[0],momTrans[1],momTrans[2],q_squared);
+                            //printf("[%i,%i,%i,%i]\t",energyIndex,qIndex[0],qIndex[1],qIndex[2]);
                             if (q_squared > 0) {
                                 if(energyIndex < EELS_E_dim){
                                     if(qIndex[0] < dims[1] && qIndex[0] >= 0){
                                         if(qIndex[1] < dims[2] && qIndex[1] >= 0){
                                             if(qIndex[2] < dims[3] && qIndex[2] >= 0){
-                                                //printf("(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0],qIndex[1],qIndex[2],probability*sqrt(q_squared));
+                                                //printf("Y(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0], qIndex[1], qIndex[2],probability*sqrt(q_squared));
                                                 EELS[energyIndex][qIndex[0]][qIndex[1]][qIndex[2]] += (probability*fermiValue/(q_squared*q_squared));
-                                            }
-                                        }
-                                    }
+                                                iterations ++;
+                                            }// else {
+                                                //printf("N(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0], qIndex[1], qIndex[2],probability*sqrt(q_squared));
+                                            //    printf("Z");
+                                            //}
+                                        }// else {
+                                                //printf("N(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0], qIndex[1], qIndex[2],probability*sqrt(q_squared));
+                                        //    printf("Y");
+                                        //}
+                                    }// else {
+                                                //printf("N(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0], qIndex[1], qIndex[2],probability*sqrt(q_squared));
+                                    //    printf("X");
+                                    //}
                                 }
                             }
+//                            printf("\n");
                         }                
                     }
-                    iterations ++;
+
                 }        
             }
         }

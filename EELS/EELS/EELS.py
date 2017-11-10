@@ -51,9 +51,9 @@ class Cell(object):
 		self.volume = np.dot(self.a, np.cross(self.b, self.c))
 
 	def _setReciprocalSpace(self):
-		self.a_resiprocal = 2*np.pi*np.cross(self.b, self.c) / self.volume
-		self.b_resiprocal = 2*np.pi*np.cross(self.c, self.a) / self.volume
-		self.c_resiprocal = 2*np.pi*np.cross(self.a, self.b) / self.volume
+		self.a_resiprocal = np.cross(self.b, self.c) / self.volume * 2*np.pi
+		self.b_resiprocal = np.cross(self.c, self.a) / self.volume * 2*np.pi
+		self.c_resiprocal = np.cross(self.a, self.b) / self.volume * 2*np.pi
 
 		self.brillouinZone = np.vstack([self.a_resiprocal, self.b_resiprocal, self.c_resiprocal])
 
