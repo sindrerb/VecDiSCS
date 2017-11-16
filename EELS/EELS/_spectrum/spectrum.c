@@ -264,7 +264,9 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
     double fermiValueI, fermiValue;
 
     printf("\n\nEf=%.3f \t",fermi_energy);
-    printf("T=%.3f K\n\n",temperature);
+    printf("T=%.3f K ",temperature);
+    temperature = temperature * 8.93103448276e-5;
+    printf("(kT=%.3f eV)\n\n",temperature);
     
 
     int iterations = 0;
