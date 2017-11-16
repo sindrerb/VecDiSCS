@@ -260,6 +260,9 @@ class ModelSystem():
 		if fermiEnergy:
 			self.fermiEnergy = fermiEnergy
 
+
+		temperature = 0*8.93103448276e-5 #Convert to kT in eV
+
 		energyBands = []
 		waveStates = []
 		for band in self.bands:
