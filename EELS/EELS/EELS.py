@@ -77,7 +77,7 @@ class Cell(object):
 		return "Lattice parameters:\n{}\nRelatice atom positions:\n {}".format(self.lattice, np.round(np.asarray(self.getAtomPositons()),2))
 
 class Band(object):
-	HBAR = 1973 #eV AA
+	HBAR_C = 1973 #eV AA
 	M_E = .511e6 #eV/c^2
 
 	def __init__(self, k_grid, energies=None, waves=None):
@@ -88,9 +88,12 @@ class Band(object):
 			self.waves = waves
 
 	def setParabolic(self, energy_offset=0, effective_mass=np.ones((3,)), k_center=np.zeros((3,))):
-		self.energies = energy_offset+(self.HBAR**2/(2*self.M_E))*((self.k_grid[:,0]-k_center[0])**2/effective_mass[0]\
-			+(self.k_grid[:,1]-k_center[1])**2/effective_mass[1]\
-			+(self.k_grid[:,2]-k_center[2])**2/effective_mass[2])
+		self.energies = energy_offset+(self.HBAR_C**2/(2*self.M_E))*((self.k_grid[:,0]-k_center[0])**2/effective_mass[0]\
+					+(self.k_grid[:,1]-k_center[1])**2/effective_mass[1]+(self.k_grid[:,2]-k_center[2])**2/effective_mass[2])
+	
+		#self.energies = energy_offset+(self.HBAR_C**2/(2*self.M_E))*(k[:,0]**2+k[:,1]**2+k[:,2]**2)	
+
+
 		self.waves = np.stack([np.zeros(self.energies.shape),np.ones(self.energies.shape)], axis=1)
 
 	"""def __repr__(self):
@@ -129,7 +132,11 @@ class ModelSystem():
 		self.bands.append(band)
 
 	def addParabolicBand(self, energy_offset=0, effective_mass=np.ones((3,)), k_center=np.zeros((3,))):
-		band = Band(self.reciprocalGrid()[0])
+		k = np.dot(self.reciprocalGrid()[0],self.cell.brillouinZone)
+		effective_mass = np.dot(effective_mass,self.cell.brillouinZone)
+		k_center = np.dot(k_center,self.cell.brillouinZone)
+
+		band = Band(k)
 		band.setParabolic(energy_offset, effective_mass, k_center)
 		self.addBand(band)
 		
@@ -148,21 +155,28 @@ class ModelSystem():
 
 	def diffractionGrid(self):
 		diffractionZone = np.max(np.abs(self.cell.brillouinZone),axis=0)
-		diffractionBins = np.round(diffractionZone*self._pointDensity).astype(int)
+		diffractionBins = np.round(diffractionZone*self._pointDensity/1.3+2).astype(int) #/1.3 is a bad temporarly solution
+		for i in range(len(diffractionBins)):
+			if (diffractionBins[i]%2==0):
+				diffractionBins[i] += 1				
 		return diffractionZone, diffractionBins
 
 	def reciprocalGrid(self):
 		if isinstance(self._pointDensity,type(None)):
-			raise TypeError("No meshgrid is defined, use meshgrid(pointDensity) to set grid.")
+			raise TypeError("No meshgrid is defined, use meshgrid(pointDensity) to set meshgrid.")
 		else:
-			mapping, grid = spg.get_ir_reciprocal_mesh(self._pointDensity, (self.cell.lattice, self.cell.getAtomPositons(), self.cell.getAtomNumbers()), is_shift=[0, 0, 0])
-			
-			k_grid = np.dot(grid[np.unique(mapping)]/(self._pointDensity-1),self.cell.brillouinZone)
+			gridZone = np.max(np.abs(self.cell.brillouinZone),axis=0)
+			gridPoints = np.round(gridZone*self._pointDensity).astype(int)
+			for i in range(len(gridPoints)):
+				if (gridPoints[i]%2==0):
+					gridPoints[i] += 1	
+
+			mapping, grid = spg.get_ir_reciprocal_mesh(gridPoints, (self.cell.lattice, self.cell.getAtomPositons(), self.cell.getAtomNumbers()), is_shift=[0, 0, 0])
+			k_grid = grid[np.unique(mapping)]/(gridPoints-1)
 			
 			k_list = []
 			for i, map_id in enumerate(mapping[np.unique(mapping)]):
-			    k_list.append(np.dot((grid[mapping==map_id]/(self._pointDensity-1)),self.cell.brillouinZone).tolist())
-
+			    k_list.append((grid[mapping==map_id]/(self._pointDensity-1)).tolist()) #np.dot(,self.cell.brillouinZone)
 			return k_grid, k_list
 
 	def createMeta(self, name=None, title=None, authors=None, notes=None, signal_type=None, elements=None, model=None):
@@ -233,7 +247,7 @@ class ModelSystem():
 		for i in range(len(data.shape)-1):
 			name = names[i+1]
 			s.axes_manager[2-i].name = name
-			s.axes_manager[name].scale = diffractionZone[i]/diffractionBins[i]
+			s.axes_manager[name].scale = diffractionZone[i]/(diffractionBins[i]-1)
 			s.axes_manager[name].units = "AA-1"
 			s.axes_manager[name].offset = -diffractionZone[i]/2
 		i += 1
@@ -261,7 +275,6 @@ class ModelSystem():
 			self.fermiEnergy = fermiEnergy
 
 
-		temperature = 0*8.93103448276e-5 #Convert to kT in eV
 
 		energyBands = []
 		waveStates = []
@@ -270,6 +283,8 @@ class ModelSystem():
 			waveStates.append(band.waves)
 
 		diffractionZone, diffractionBins = self.diffractionGrid()
+		print("CCD:")
+		print(diffractionZone, diffractionBins)
 
 		data = _spectrum.calculate_spectrum(diffractionZone, diffractionBins, self.cell.brillouinZone, self.reciprocalGrid()[1], np.stack(energyBands, axis=1),  np.stack(waveStates, axis=1), energyBins, self.fermiEnergy, self.temperature)
 
