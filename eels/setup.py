@@ -5,17 +5,16 @@ from distutils.core import setup, Extension
 import numpy as np
 
 setup(
-      name = 'EELS',
+      name = 'pyeels',
       version = '1.0',
 	    author = "Sindre R. Bilden",
 	    author_email = "s.r.bilden@fys.uio.no",
 	    description = ("A collection of functions for simulating EELS"),
-    	packages=['EELS'],
-
+    	packages=['pyeels'],
       )
 
 
-ext_modules = [ Extension('_spectrum', sources = ['./EELS/_spectrum/spectrum.c']) ]
+ext_modules = [ Extension('_spectrum', sources = ['./pyeels/_spectrum/spectrum.c']) ]
 
 setup(
       name = '_spectrum',
