@@ -13,7 +13,3 @@ def pack_values(mesh,k_grid, e_array,w_array):
 			raise IndexError("No dimension in w_array match length of k_grid")
 			return None
 	return (mesh, k_grid, e_array, w_array)
-
-
-def test():
-	print("TEST")

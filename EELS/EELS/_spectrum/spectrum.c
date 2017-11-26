@@ -8,29 +8,28 @@ double fermiDirac(double energy, double fermiLevel, double temperature){
 static PyObject*
 calculate_spectrum (PyObject *dummy, PyObject *args)
 {
-    PyObject *arg1 = NULL; // Should be a 3x1 iterable 
-    PyObject *arg2 = NULL; // Should be a 3x1 iterable 
-    double fermiEnergy; // Shuld be regular float
+
+    PyObject *diffractionZone = NULL;
+    PyObject *diffractionBins = NULL;
+    PyObject *brillouinZone = NULL;
+    PyObject *k_grid = NULL;
+    PyObject *energy_bands = NULL;
+    PyObject *wave_vectors = NULL;
+    PyObject *energy_bins = NULL;
+   
+    double fermi_energy; // Shuld be regular float
     double temperature;
 
-    if (!PyArg_ParseTuple(args, "OOdd", &arg1, &arg2, &fermiEnergy, &temperature))
+    if (!PyArg_ParseTuple(args, "OOOOOOOdd", &diffractionZone, &diffractionBins, &brillouinZone, &k_grid, &energy_bands, &wave_vectors, &energy_bins, &fermi_energy, &temperature))
         return NULL;
 
-
-    PyObject *mesh = NULL; 
-    PyObject *k_grid = NULL; 
-    PyObject *k_list = NULL; 
-    PyObject *k_vec = NULL; 
-    PyObject *energy_bands=NULL;
-    PyObject *wave_vectors=NULL;
-
-
-    int nDim = 0;
     npy_intp *shape;
 
-    int nBands = 0;
-    int nWaves = 0;
-    int k_size, sub_k_size;
+    int nBands = PyArray_SHAPE(energy_bands)[1];
+    int nWaves = PyArray_SHAPE(wave_vectors)[2];
+    int k_size = PyList_Size(k_grid);
+
+    /*
     if (PyTuple_Check(arg1)){
 
         //#########   MESH
@@ -48,18 +47,6 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
                 PyErr_SetString(PyExc_TypeError, "Mesh must be list, array or tuple");
                 return Py_None;
             }
-            /*
-            if (PyTuple_Size(mesh) < 3) return Py_None;
-
-            for(int i = 0; i < 3; i++){
-                if (!PyTuple_GetItem(arg1,i)){
-                    return Py_None;
-                } else {
-                    mesh[i] = PyLong_AsLong(PyTuple_GetItem(arg1,i));
-                }
-            */
-
-            //#########   K LIST
 
             k_grid = PyTuple_GetItem(arg1,1);
             if (PyList_Check(k_grid)){
@@ -78,27 +65,7 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
                     k_vec = PyList_GetItem(k_list,0);
 
                     if (PyList_Check(k_vec)){
-                        /*
-                        //k_list[i] = (double **) malloc(sub_k_size);
-                        for(int j = 0; j<sub_k_size; j++){
-                            k_vec = PyList_GetItem(k_list,j);
-
-                            //k_list[i][j] = (double *) malloc(3);
-
-                            if (PyList_Size(k_vec) < 3){
-                                return Py_None;
-                            } else {
-                                for(int k = 0; k<3; k++){
-                                    //k_list[i][j][k] = PyFloat_AsDouble(PyList_GetItem(k_vec_py,k));
-                                    //printf("%.2f\t",k_list[i][j][k]);
-                                    printf("%.2f\t", PyFloat_AsDouble(PyList_GetItem(k_vec,k)));
-
-                                }
-                                printf("\n");
-                            }
-                        }
-                        */
-                        
+                       
                     } else {
                         return Py_None;
                     }
@@ -130,14 +97,7 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
                         nDim = PyArray_NDIM(energy_bands);   //number of dimensions
                         shape = PyArray_SHAPE(energy_bands);
                         nBands = shape[1];
-                        /*
-                        for (int k = 0; k < shape[0]; k++){
-                            for (int band = 0; band < shape[1]; band++){
-                                energy = (double *) PyArray_GETPTR2(energy_bands, k, band);
-                                printf("%.2f \t",*energy);
-                            }printf("\n");
-                        }
-                        */
+                        
                     }
                 } else {
                     PyErr_SetString(PyExc_TypeError, "Wrong number of dimensions in element 3, must be ndim=2.");
@@ -193,17 +153,7 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
 
                             shape = PyArray_SHAPE(wave_vectors); // Redefine shape after transposing
                             nWaves = shape[2];
-                            /*
-                            for (int k = 0; k < shape[0]; k++){
-                                for (int band = 0; band < shape[1]; band++){
-                                    for (int v = 0; v < shape[2]; v++){
-                                        wave = (double *) PyArray_GETPTR3(wave_vectors, k, band, v); //Complex?
-                                        printf("%.2f  ",*wave);
-                                    }printf("\t");
-                                }printf("\n");
-                            }
-                            */
-                        }
+
                     }
                 } else {
                     PyErr_SetString(PyExc_TypeError, "Wrong number of dimensions in element 4, must be ndim=3.");
@@ -222,57 +172,69 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
             PyErr_SetString(PyExc_TypeError, "First argument must be tuple.");
             return Py_None;
     }
+    */
+
 
 
     int EELS_E_dim = 0;
-    double *dE_p;
-    double *energy_offset_p;
     double dE;
     double energy_offset;
     
 
     //######### ENERGY BINNING
     
-    if (PyArray_Check(arg2)){
-        if(PyArray_NDIM(arg2)==1){
-            shape=PyArray_SHAPE(arg2);
-            EELS_E_dim = shape[0];
-            energy_offset_p = (double *) PyArray_GETPTR1(arg2,0);
-            dE_p = (double *) PyArray_GETPTR1(arg2,1);
-            energy_offset = *energy_offset_p;
-            dE = *dE_p-energy_offset;
-            printf("ENERGYOFFSET:%.2f\tENERGYSTEP:%.2f\n",energy_offset,dE);
-        }
-    } else {
-        PyErr_SetString(PyExc_TypeError, "Second argument must be ndarray.");
-        return Py_None;   
-    }
+
+    shape=PyArray_SHAPE(energy_bins);
+    EELS_E_dim = shape[0];
+    energy_offset = *(double *) PyArray_GETPTR1(energy_bins,0);
+    dE= *(double *) PyArray_GETPTR1(energy_bins,1)-energy_offset;
+
+    printf("ENERGYOFFSET:%.2f\tENERGYSTEP:%.2f\n",energy_offset,dE);
+
+
+
 
 
     // Create EELS-histogram structure
     npy_intp dims[4];
     dims[0] = EELS_E_dim;
-    dims[1] = PyLong_AsLong(PyTuple_GetItem(mesh,0));
-    dims[2] = PyLong_AsLong(PyTuple_GetItem(mesh,1));
-    dims[3] = PyLong_AsLong(PyTuple_GetItem(mesh,2));
+    
+    //dims[1] = PyLong_AsLong(PyTuple_GetItem(mesh,0));
+    //dims[2] = PyLong_AsLong(PyTuple_GetItem(mesh,1));
+    //dims[3] = PyLong_AsLong(PyTuple_GetItem(mesh,2));
+    
+    dims[1] = *(int*) PyArray_GETPTR1(diffractionBins, 0);
+    dims[2] = *(int*) PyArray_GETPTR1(diffractionBins, 1);
+    dims[3] = *(int*) PyArray_GETPTR1(diffractionBins, 2);
+
 
 
     int energyIndex = 0;
     int qIndex[3] = {0,0,0};
 
-    double dQ[3] = {1.0/(dims[1]), 1.0/(dims[2]), 1.0/(dims[3])};
+    double dQ[3] = {*(double*)PyArray_GETPTR1(diffractionZone,0)/(dims[1]), *(double*)PyArray_GETPTR1(diffractionZone,1)/(dims[2]), *(double*)PyArray_GETPTR1(diffractionZone,2)/(dims[3])};
+
+
 
     printf("MOMENT_STEP: ");
     for(int i = 0; i < 3; i++){
         printf("%.3f,  ",dQ[i]);
-    }printf("\nDone!");
+    }printf("\n \n");
+
+
+    printf("Brillouin Zone:\n");
+    for(int i = 0; i < 3; i++) {
+        for(int j = 0; j < 3; j++) {
+            printf("%f\t", *(double *) PyArray_GETPTR2(brillouinZone, i, j));
+        } 
+        printf("\n");
+    }printf("\n");
 
 
 
     double ****EELS = (double****)malloc( dims[0]*dims[1]*dims[2]*dims[3] * sizeof(double***));
 
     for (int e = 0; e < dims[0]; e++){  
-        printf("%i,",e);
         EELS[e] = (double ***)malloc( dims[1]*dims[2]*dims[3] * sizeof(double**));
         for (int i = 0; i < dims[1]; i++){  
             EELS[e][i] = (double **)malloc( dims[2]*dims[3] * sizeof(double*));
@@ -283,50 +245,38 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
                 } 
             } 
         }
-    }printf("\n");
+    }
 
-    /*
-    // Initialize zero values
-    //double EELS[dims[0]][dims[1]][dims[2]][dims[3]];
 
-    
-    //double ****EELS = malloc(dims[0]*sizeof((double*)))
-    printf("EELS=");
-    for (int e = 0; e < dims[0]; e++){  
-        printf("%i",e);
-        for (int i = 0; i < dims[1]; i++){  
-            for (int j = 0; j < dims[2]; j++){  
-                for (int k = 0; k < dims[3]; k++){  
-                    EELS[e][i][j][k] = 0.0;
-                } 
-            } 
-        }
-    }printf("\n");
-    */
 
     // Loop over k-grid
+
+
 
     double *initial_energy;
     double *final_energy;
     double energyTransfer;
     double probability;
-    double *v_i;
-    double *v_f;
+    double v_i;
+    double v_f;
     double momTrans[3] = {0.0,0.0,0.0};
     double q_squared;
     double fermiValueI, fermiValue;
-    double xi,yi,zi;
 
-    printf("\n\nEf=%.3f \n\n",fermiEnergy);
+    printf("\n\nEf=%.3f \t",fermi_energy);
+    printf("T=%.3f K ",temperature);
+    temperature = temperature * 8.93103448276e-5;
+    printf("(kT=%.3f eV)\n\n",temperature);
+    
 
     int iterations = 0;
     for (int initial_k = 0; initial_k < k_size; initial_k++){
-       for (int final_k = 0; final_k < k_size; final_k++){
+        for (int final_k = 0; final_k < k_size; final_k++){
+
             //printf("\nk(%i)=>k(%i):",initial_k, final_k);
             for (int initial_band = 0; initial_band < nBands-1; initial_band++){
                 initial_energy = (double *) PyArray_GETPTR2(energy_bands, initial_k, initial_band);
-
-                fermiValueI = fermiDirac(*initial_energy,fermiEnergy,temperature);
+                fermiValueI = fermiDirac(*initial_energy,fermi_energy,temperature);
                 if (fermiValueI < 1e-5) continue; //Speeds up calculation
  
             
@@ -334,29 +284,25 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
 
                     final_energy =  (double *) PyArray_GETPTR2(energy_bands, final_k, final_band);
 
-                    fermiValue = fermiValueI * (1.0-fermiDirac(*final_energy, fermiEnergy, temperature));
-                    //if (*final_energy < fermiEnergy) continue; //Speeds up calculation
+                    fermiValue = fermiValueI * (1.0-fermiDirac(*final_energy, fermi_energy, temperature));
+
                     if (fermiValue < 1e-5) continue; //Speeds up calculation
 
 
                     energyTransfer = *final_energy-*initial_energy;
                     energyIndex = (energyTransfer-energy_offset)/dE;
-                    
+                    //printf("%.3f - %.3f = %.3f => [%i]\t", energyTransfer, energy_offset, (energyTransfer-energy_offset), energyIndex );
                     probability = 0;
-       
                     
                     for (int v = 0; v < nWaves; v++){                      
-                        v_i = (double *) PyArray_GETPTR3(wave_vectors, initial_k, initial_band,v);
-                        v_f = (double *) PyArray_GETPTR3(wave_vectors, final_k, final_band,v);
-
-                        probability += *v_i*(*v_f);
-                        /*
-                        probability += PyComplex_RealAsDouble(v_i)*PyComplex_RealAsDouble(v_f)+PyComplex_ImagAsDouble(v_i)*PyComplex_ImagAsDouble(v_i);
-                        */
+                        v_i = *(double *) PyArray_GETPTR3(wave_vectors, initial_k, initial_band,v);
+                        v_f = *(double *) PyArray_GETPTR3(wave_vectors, final_k, final_band,v);
+                        //printf("(%f * %f)\n", v_i, v_f);,
+                        probability += v_i * v_f;
                     }
                     probability = probability*probability;
                 
-                    //printf("\t %.2f \t %i \t|\t",energyTransfer, energyIndex);
+                    //printf("\t %.2f \t %i \t|\n",energyTransfer, energyIndex);
 
 
 
@@ -374,64 +320,55 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
                             final_k_vec = PyList_GetItem(final_k_list, final_k_index);
                             
 
+                            //for(int qAxis = 0; qAxis < 3; qAxis++) {
+                                //momProj[qAxis] = 0;
                             for(int q = 0; q < 3; q++){
                                 momTrans[q] =  (PyFloat_AsDouble(PyList_GetItem(final_k_vec,q))-PyFloat_AsDouble(PyList_GetItem(initial_k_vec,q)));
-                                if(momTrans[q]>0.5){
-                                    momTrans[q] = momTrans[q]-1.0;
+                                if(momTrans[q]>*(double*)PyArray_GETPTR1(diffractionZone,q)*0.5){
+                                    //printf("%.2f =>", momTrans[q]);
+                                    momTrans[q] = momTrans[q]-*(double*)PyArray_GETPTR1(diffractionZone,q);
+                                    //SKJEKK HER!
+                                    //printf("%.2f\n", momTrans[q]);
                                 } 
-                                if(momTrans[q]<-0.5){
-                                    momTrans[q] = momTrans[q]+1.0;
-
+                                if(momTrans[q]<*(double*)PyArray_GETPTR1(diffractionZone,q)*(-0.5)){
+                                    //printf("(%.2f>%.2f) %.2f",*(double*)PyArray_GETPTR1(diffractionZone,q)*(-0.5), momTrans[q], momTrans[q]);
+                                    momTrans[q] = momTrans[q]+*(double*)PyArray_GETPTR1(diffractionZone,q);
+                                    //printf("+%.2f=%.2f\n",*(double*)PyArray_GETPTR1(diffractionZone,q), momTrans[q]);
                                 }
-                                
-                                qIndex[q] = (momTrans[q]+0.5)/dQ[q]; //0.5 +- 1e-5
+                                qIndex[q] = (momTrans[q]+*(double*)PyArray_GETPTR1(diffractionZone,q)*0.5)/dQ[q];
+    //                                    momProj[qAxis] += momTrans[q]* *(double *)PyArray_GETPTR2(brillouinZone, qAxis,q);
                             }
-                            /*
-                            if(initial_k == 0 && final_k == 1){
+                                //qIndex[qAxis] += (momProj[q]+0.5)/dQ[q]; //0.5 +- 1e-5
+                            //}
 
-                                xi = PyFloat_AsDouble(PyList_GetItem(final_k_vec,0));
-                                yi = PyFloat_AsDouble(PyList_GetItem(final_k_vec,1));
-                                zi = PyFloat_AsDouble(PyList_GetItem(final_k_vec,2));
-                                //printf("(%.2f, %.2f, %.2f)=>",xi,yi,zi);
-
-                                xi = PyFloat_AsDouble(PyList_GetItem(initial_k_vec,0));
-                                yi = PyFloat_AsDouble(PyList_GetItem(initial_k_vec,1));
-                                zi = PyFloat_AsDouble(PyList_GetItem(initial_k_vec,2));
-                                
-                                printf("(%.2f, %.2f, %.2f)\t",xi,yi,zi);
-
-                                printf("[%i]->[%i]: E=%.3f=>[%i]<%i : \t",initial_k_index,final_k_index,energyTransfer, energyIndex, EELS_E_dim);
-                                printf("(%.2f, %.2f, %.2f)=>",momTrans[0],momTrans[1],momTrans[2]);
-                                printf("( %i,  %i,  %i)\n",qIndex[0],qIndex[1],qIndex[2]);
-                                
-                            }
-                            */
                             q_squared = (momTrans[0]*momTrans[0]+momTrans[1]*momTrans[1]+momTrans[2]*momTrans[2]);
-                            //printf("[%.2f,%.2f,%.2f]=%.3f\n",momTrans[0],momTrans[1],momTrans[2],q_squared);
-                            //printf("[%i,%i,%i,%i]=%.3f\n",energyIndex,qIndex[0],qIndex[1],qIndex[2],q_squared);
+                            //printf("[%.2f,%.2f,%.2f]=>",momTrans[0],momTrans[1],momTrans[2],q_squared);
+                            //printf("[%i,%i,%i,%i]\t",energyIndex,qIndex[0],qIndex[1],qIndex[2]);
                             if (q_squared > 0) {
                                 if(energyIndex < EELS_E_dim){
                                     if(qIndex[0] < dims[1] && qIndex[0] >= 0){
                                         if(qIndex[1] < dims[2] && qIndex[1] >= 0){
                                             if(qIndex[2] < dims[3] && qIndex[2] >= 0){
-                                                //printf("(%i, %i, %i), %.2f \n",qIndex[0],qIndex[1],qIndex[2],sqrt(q_squared));
+                                                //printf("Y(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0], qIndex[1], qIndex[2],probability*sqrt(q_squared));
                                                 EELS[energyIndex][qIndex[0]][qIndex[1]][qIndex[2]] += (probability*fermiValue/(q_squared*q_squared));
-                                            }
-                                        }
-                                    } else {
-
-                                    }
-                                    /* else {
-                                        printf("( %i,  %i,  %i)\n",qIndex[0],qIndex[1],qIndex[2]);
-                                    }*/
+                                                iterations ++;
+                                            }// else {
+                                                //printf("N(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0], qIndex[1], qIndex[2],probability*sqrt(q_squared));
+                                            //    printf("Z");
+                                            //}
+                                        }// else {
+                                                //printf("N(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0], qIndex[1], qIndex[2],probability*sqrt(q_squared));
+                                        //    printf("Y");
+                                        //}
+                                    }// else {
+                                                //printf("N(%i, %i, %i, %i), %.2f \n",energyIndex, qIndex[0], qIndex[1], qIndex[2],probability*sqrt(q_squared));
+                                    //    printf("X");
+                                    //}
                                 }
                             }
+//                            printf("\n");
                         }                
                     }
-                    iterations ++;
-
-
-
 
                 }        
             }
@@ -439,6 +376,10 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
     }
     
     //PyArrayObject *EELS_Py = (PyArrayObject *) PyArray_SimpleNewFromData(4,dims,NPY_FLOAT64,EELS);
+
+
+
+
 
     // PyArray_SimpleNew allocates the memory needed for the array.
     PyArrayObject *ArgsArray = PyArray_SimpleNew(4, dims, NPY_DOUBLE);
@@ -463,7 +404,7 @@ calculate_spectrum (PyObject *dummy, PyObject *args)
 
     printf("\n\n Iterations: %i \n\n", iterations);
     return Py_BuildValue("O", ArgsArray);
-    //return Py_BuildValue("O&", EELS);
+    //return Py_BuildValue("d", temperature);
 }
 
 

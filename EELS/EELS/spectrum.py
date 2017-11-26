@@ -108,7 +108,7 @@ def createMeta(name=None, title=None, authors=None, notes=None, signal_type=None
 
 
 
-def calculate_spectrum(data_structre, energy_binning, fermi_energy, temperature=298):
+def calculate_spectrum(data_structre, energy_binning, fermi_energy, brillouinZone=np.eye(3), temperature=298):
     """Calculating multi-dimensional spectrum of a band diagram
     :param data_structure: A tuple of:
                            - meshgrid (3x1 tuple with number of k-points in each dimension)
@@ -120,8 +120,8 @@ def calculate_spectrum(data_structre, energy_binning, fermi_energy, temperature=
     :param temperature: the themperature of the system
     :returns: A four dimensional histogram of energy transfer with corresponding moment transfer
     """
-    
+
     temperature = temperature*(0.0259/298)
 
-    A = _spectrum.calculate_spectrum(data_structre, energy_binning, fermi_energy, temperature)
+    A = _spectrum.calculate_spectrum(data_structre, energy_binning, brillouinZone, fermi_energy, temperature)
     return A
