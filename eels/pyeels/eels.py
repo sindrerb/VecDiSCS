@@ -173,7 +173,7 @@ class EELS:
                 f += i+1
                 transitions.append((i,f, initial, final))
         
-        p = Pool(processes=4)
+        p = Pool(processes=min(len(transitions),4))
         signals = p.map(self.calculate, transitions)
         p.close()
 
